@@ -1,0 +1,83 @@
+Code 
+
+
+CREATE SCHEMA pandemic;
+
+ USE pandemic; 
+ 
+  SELECT * FROM infectious_cases LIMIT 20; 
+  
+  CREATE TABLE regions (    region_id INT AUTO_INCREMENT PRIMARY KEY,    entity VARCHAR(100),    code VARCHAR(10));
+
+ CREATE TABLE normalized_cases (    case_id INT AUTO_INCREMENT PRIMARY KEY,    region_id INT,    year INT,    number_rabies VARCHAR(50),    number_malaria VARCHAR(50),    number_plague VARCHAR(50),    FOREIGN KEY (region_id) REFERENCES regions(region_id));
+
+ INSERT INTO normalized_cases (region_id, year, number_rabies, number_malaria)
+SELECT 
+    r.region_id,
+    ic.Year,
+    ic.Number_rabies,
+    ic.Number_malaria
+FROM
+    infectious_cases ic
+JOIN 
+    regions r ON ic.Entity = r.entity AND ic.Code = r.code; 
+    
+    
+    SELECT COUNT(*) FROM infectious_cases; 
+    
+    
+     SELECT 
+    r.entity,
+    r.code,
+    AVG(CAST(nc.number_rabies AS DECIMAL(10,2))) AS avg_rabies,
+    MIN(CAST(nc.number_rabies AS DECIMAL(10,2))) AS min_rabies,
+    MAX(CAST(nc.number_rabies AS DECIMAL(10,2))) AS max_rabies,
+    SUM(CAST(nc.number_rabies AS DECIMAL(10,2))) AS sum_rabies
+FROM 
+    normalized_cases nc
+JOIN 
+    regions r ON nc.region_id = r.region_id
+WHERE 
+    nc.number_rabies != ''
+GROUP BY 
+    r.entity, r.code
+ORDER BY 
+    avg_rabies DESC
+LIMIT 10;
+     
+     
+ SELECT 
+    ic.Year,
+    STR_TO_DATE(CONCAT(ic.Year, '-01-01'), '%Y-%m-%d') AS year_date,
+    NOW() AS todays_date,
+    TIMESTAMPDIFF(YEAR, 
+                 STR_TO_DATE(CONCAT(ic.Year, '-01-01'), '%Y-%m-%d'), 
+                 NOW()) AS years_difference
+FROM 
+    infectious_cases ic; 
+    
+    
+   DELIMITER //
+
+DROP FUNCTION IF EXISTS calculate_years_difference //
+
+
+DELIMITER //
+
+CREATE FUNCTION calculate_years_difference(input_year INT) 
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE year_date DATE;
+    SET year_date = STR_TO_DATE(CONCAT(input_year, '-01-01'), '%Y-%m-%d');
+    RETURN TIMESTAMPDIFF(YEAR, year_date, CURDATE());
+END //
+
+DELIMITER ;
+
+
+SELECT 
+    ic.Year,
+    calculate_years_difference(ic.Year) AS years_since_then
+FROM 
+    infectious_cases ic;
